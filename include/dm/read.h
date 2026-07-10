@@ -1274,6 +1274,57 @@ static inline phy_interface_t dev_read_phy_mode(const struct udevice *dev)
 #endif /* CONFIG_DM_DEV_READ_INLINE */
 
 /**
+ * dev_count_u32() - count the u32 values in a property
+ *
+ * @dev: device to examine
+ * @name: name of the property
+ * Return:
+ *   number of u32 values in the property, or -ve error value if not found
+ */
+static inline int dev_count_u32(const struct udevice *dev,
+				const char *name)
+{
+	int size;
+
+	size = dev_read_size(dev, name);
+	if (size < 0)
+		return size;
+
+	return size / sizeof(u32);
+}
+
+/* Linux compatibility */
+
+#define device_property_count_u32 dev_count_u32
+#define device_property_read_u32_array dev_read_u32_array
+
+static inline bool device_property_present(const struct udevice *dev,
+					   const char *propname)
+{
+	return dev_read_size(dev, propname) > 0;
+}
+
+static inline int device_property_count_u8(const struct udevice *dev,
+					   const char *propname)
+{
+	return dev_read_size(dev, propname);
+}
+
+static inline int device_property_read_u8_array(const struct udevice *dev,
+						const char *propname,
+						u8 *out, size_t count)
+{
+	const u8 *ptr = dev_read_u8_array_ptr(dev, propname, count);
+
+	if (!ptr)
+		return -EINVAL;
+
+	memcpy(out, ptr, count);
+
+	return 0;
+}
+
+/**
  * dev_for_each_subnode() - Helper function to iterate through subnodes
  *
  * This creates a for() loop which works through the subnodes in a device's

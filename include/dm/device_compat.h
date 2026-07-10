@@ -119,4 +119,15 @@
 #define dev_vdbg(dev, fmt, ...) \
 	__dev_printk(LOGL_DEBUG_CONTENT, dev, fmt, ##__VA_ARGS__)
 
+#define dev_err_probe(dev, err, fmt, ...) \
+	({ \
+		int _err = (err); \
+		if (_err != -EPROBE_DEFER) { \
+			dev_err(dev, "error %d: " fmt, _err, ##__VA_ARGS__); \
+		} else { \
+			dev_dbg(dev, "error %d: " fmt, _err, ##__VA_ARGS__); \
+		} \
+		_err; \
+	 })
+
 #endif
