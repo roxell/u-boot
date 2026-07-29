@@ -383,45 +383,6 @@ int dm_usb_gadget_handle_interrupts(struct udevice *dev)
 
 	return gadget->isr(0, gadget);
 }
-
-int usb_gadget_register_driver(struct usb_gadget_driver *driver)
-{
-	int ret;
-
-	if (!driver || driver->speed < USB_SPEED_FULL || !driver->bind ||
-	    !driver->setup) {
-		printf("bad parameter.\n");
-		return -EINVAL;
-	}
-
-	if (!gadget) {
-		printf("Controller uninitialized\n");
-		return -ENXIO;
-	}
-
-	ret = musb_gadget_start(&gadget->g, driver);
-	if (ret < 0) {
-		printf("gadget_start failed with %d\n", ret);
-		return ret;
-	}
-
-	ret = driver->bind(&gadget->g);
-	if (ret < 0) {
-		printf("bind failed with %d\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
-{
-	if (driver->disconnect)
-		driver->disconnect(&gadget->g);
-	if (driver->unbind)
-		driver->unbind(&gadget->g);
-	return 0;
-}
 #endif /* CONFIG_USB_MUSB_GADGET */
 
 struct musb *musb_register(struct musb_hdrc_platform_data *plat, void *bdata,
@@ -444,11 +405,23 @@ struct musb *musb_register(struct musb_hdrc_platform_data *plat, void *bdata,
 		return ERR_PTR(-EINVAL);
 	}
 
-	*musbp = musb_init_controller(plat, (struct device *)bdata, ctl_regs);
+	*musbp = musb_init_controller(plat, bdata, ctl_regs);
 	if (IS_ERR(*musbp)) {
 		printf("Failed to init the controller\n");
 		return ERR_CAST(*musbp);
 	}
+
+#if defined(CONFIG_USB_MUSB_GADGET) && !CONFIG_IS_ENABLED(DM_USB_GADGET)
+	if (plat->mode == MUSB_PERIPHERAL) {
+		int ret;
+
+		ret = usb_add_gadget_udc(bdata, &gadget->g);
+		if (ret) {
+			printf("Failed to register the gadget\n");
+			return ERR_PTR(ret);
+		}
+	}
+#endif
 
 	return *musbp;
 }
