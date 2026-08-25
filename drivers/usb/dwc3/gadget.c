@@ -228,6 +228,10 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	dwc3_gadget_del_and_unmap_request(dep, req, status);
 	req->status = DWC3_REQUEST_STATUS_COMPLETED;
 
+	if (req->request.dma && req->request.length)
+		dwc3_invalidate_cache((uintptr_t)req->request.dma,
+				      req->request.length);
+
 	spin_unlock(&dwc->lock);
 	usb_gadget_giveback_request(&dep->endpoint, &req->request);
 	spin_lock(&dwc->lock);
@@ -1384,6 +1388,9 @@ static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
 	 */
 	wmb();
 	trb->ctrl |= DWC3_TRB_CTRL_HWO;
+
+	dwc3_flush_cache((uintptr_t)dma, trb_length);
+	dwc3_flush_cache((uintptr_t)trb, sizeof(*trb));
 
 	dwc3_ep_inc_enq(dep);
 }
@@ -3152,6 +3159,8 @@ static int dwc3_gadget_ep_reclaim_completed_trb(struct dwc3_ep *dep,
 		const struct dwc3_event_depevt *event, int status, int chain)
 {
 	unsigned int		count;
+
+	dwc3_invalidate_cache((uintptr_t)trb, sizeof(*trb));
 
 	dwc3_ep_inc_deq(dep);
 
