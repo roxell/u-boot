@@ -947,6 +947,9 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep, unsigned int action)
 		trb_link->bph = upper_32_bits(dwc3_trb_dma_offset(dep, trb_st_hw));
 		trb_link->ctrl |= DWC3_TRBCTL_LINK_TRB;
 		trb_link->ctrl |= DWC3_TRB_CTRL_HWO;
+
+		dwc3_flush_cache((uintptr_t)dep->trb_pool,
+				 sizeof(struct dwc3_trb) * DWC3_TRB_NUM);
 	}
 
 	/*
@@ -1384,6 +1387,9 @@ static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
 	 */
 	wmb();
 	trb->ctrl |= DWC3_TRB_CTRL_HWO;
+
+	dwc3_flush_cache((uintptr_t)dma, trb_length);
+	dwc3_flush_cache((uintptr_t)trb, sizeof(*trb));
 
 	dwc3_ep_inc_enq(dep);
 }
@@ -3154,6 +3160,8 @@ static int dwc3_gadget_ep_reclaim_completed_trb(struct dwc3_ep *dep,
 		const struct dwc3_event_depevt *event, int status, int chain)
 {
 	unsigned int		count;
+
+	dwc3_invalidate_cache((uintptr_t)trb, sizeof(*trb));
 
 	dwc3_ep_inc_deq(dep);
 
