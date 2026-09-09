@@ -241,6 +241,8 @@ static inline void sync(void)
  */
 #define dmb()		__asm__ __volatile__ ("" : : : "memory")
 #define mb()		__asm__ __volatile__ ("mfence" : : : "memory")
+#define rmb()		dmb()
+#define wmb()		dmb()
 #define __iormb()	dmb()
 #define __iowmb()	dmb()
 
