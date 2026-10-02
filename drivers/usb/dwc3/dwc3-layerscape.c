@@ -153,7 +153,13 @@ static int dwc3_layerscape_host_probe(struct udevice *dev)
 	hccr = priv->gen_priv.base;
 	hcor = priv->gen_priv.base + HC_LENGTH(xhci_readl(&hccr->cr_capbase));
 
-	return xhci_register(dev, hccr, hcor);
+	rc = xhci_register(dev, hccr, hcor);
+	if (rc)
+		return rc;
+
+	dwc3_enable_susphy(&priv->gen_priv.dwc3, true);
+
+	return 0;
 }
 
 static int dwc3_layerscape_host_remove(struct udevice *dev)

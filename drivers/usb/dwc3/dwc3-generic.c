@@ -278,10 +278,14 @@ static int dwc3_generic_host_probe(struct udevice *dev)
 			HC_LENGTH(xhci_readl(&(hccr)->cr_capbase)));
 
 	rc = xhci_register(dev, hccr, hcor);
-	if (rc)
+	if (rc) {
 		regulator_set_enable_if_allowed(priv->vbus_supply, false);
+		return rc;
+	}
 
-	return rc;
+	dwc3_enable_susphy(&priv->gen_priv.dwc3, true);
+
+	return 0;
 }
 
 static int dwc3_generic_host_remove(struct udevice *dev)
