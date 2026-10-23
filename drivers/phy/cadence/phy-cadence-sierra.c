@@ -258,8 +258,6 @@ struct cdns_sierra_pll_mux {
 	struct regmap_field     *termen_field;
 };
 
-#define reset_control_assert(rst) cdns_reset_assert(rst)
-#define reset_control_deassert(rst) cdns_reset_deassert(rst)
 #define reset_control reset_ctl
 
 enum cdns_sierra_phy_type {
@@ -335,22 +333,6 @@ struct cdns_sierra_phy {
 	bool autoconf;
 	unsigned int already_configured;
 };
-
-static inline int cdns_reset_assert(struct reset_control *rst)
-{
-	if (rst)
-		return reset_assert(rst);
-	else
-		return 0;
-}
-
-static inline int cdns_reset_deassert(struct reset_control *rst)
-{
-	if (rst)
-		return reset_deassert(rst);
-	else
-		return 0;
-}
 
 static int cdns_sierra_link_init(struct phy *gphy)
 {
