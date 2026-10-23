@@ -215,8 +215,6 @@ static const struct reg_field phy_pma_cmn_ctrl_2 =
 static const struct reg_field phy_pma_pll_raw_ctrl =
 					REG_FIELD(PHY_PMA_PLL_RAW_CTRL, 0, 1);
 
-#define reset_control_assert reset_assert
-#define reset_control_deassert reset_deassert
 #define reset_control reset_ctl
 #define reset_control_put reset_free
 
