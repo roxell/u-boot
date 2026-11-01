@@ -24,11 +24,11 @@
 
 #if CONFIG_IS_ENABLED(DM_USB_GADGET)
 #include <mach/atmel_usba_udc.h>
+#endif /* CONFIG_IS_ENABLED(DM_USB_GADGET) */
 
 static int usba_udc_start(struct usb_gadget *gadget,
 			  struct usb_gadget_driver *driver);
 static int usba_udc_stop(struct usb_gadget *gadget);
-#endif /* CONFIG_IS_ENABLED(DM_USB_GADGET) */
 
 #include "atmel_usba_udc.h"
 
@@ -536,10 +536,8 @@ static const struct usb_gadget_ops usba_udc_ops = {
 	.wakeup			= usba_udc_wakeup,
 	.set_selfpowered	= usba_udc_set_selfpowered,
 	.pullup			= usba_udc_pullup,
-#if CONFIG_IS_ENABLED(DM_USB_GADGET)
 	.udc_start		= usba_udc_start,
 	.udc_stop		= usba_udc_stop,
-#endif
 };
 
 static struct usb_endpoint_descriptor usba_ep0_desc = {
@@ -1235,89 +1233,6 @@ static struct usba_ep *usba_udc_pdata(struct usba_platform_data *pdata,
 	return eps;
 }
 
-#if !CONFIG_IS_ENABLED(DM_USB_GADGET)
-static struct usba_udc controller = {
-	.regs = (unsigned *)ATMEL_BASE_UDPHS,
-	.fifo = (unsigned *)ATMEL_BASE_UDPHS_FIFO,
-	.gadget = {
-		.ops		= &usba_udc_ops,
-		.ep_list	= LIST_HEAD_INIT(controller.gadget.ep_list),
-		.speed		= USB_SPEED_HIGH,
-		.is_dualspeed	= 1,
-		.name		= "atmel_usba_udc",
-	},
-};
-
-int dm_usb_gadget_handle_interrupts(struct udevice *dev)
-{
-	struct usba_udc *udc = &controller;
-
-	return usba_udc_irq(udc);
-}
-
-int usb_gadget_register_driver(struct usb_gadget_driver *driver)
-{
-	struct usba_udc *udc = &controller;
-	int ret;
-
-	if (!driver || !driver->bind || !driver->setup) {
-		log_err("bad parameter\n");
-		return -EINVAL;
-	}
-
-	if (udc->driver) {
-		log_err("UDC already has a gadget driver\n");
-		return -EBUSY;
-	}
-
-	usba_udc_enable(udc);
-
-	udc->driver = driver;
-
-	ret = driver->bind(&udc->gadget);
-	if (ret) {
-		log_err("driver->bind() returned %d\n", ret);
-		udc->driver = NULL;
-	}
-
-	return ret;
-}
-
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
-{
-	struct usba_udc *udc = &controller;
-
-	if (!driver || !driver->unbind || !driver->disconnect) {
-		log_err("bad parameter\n");
-		return -EINVAL;
-	}
-
-	driver->disconnect(&udc->gadget);
-	driver->unbind(&udc->gadget);
-	udc->driver = NULL;
-
-	usba_udc_disable(udc);
-
-	return 0;
-}
-
-int usba_udc_probe(struct usba_platform_data *pdata)
-{
-	struct usba_udc *udc;
-
-	udc = &controller;
-
-	udc->usba_ep = usba_udc_pdata(pdata, udc);
-
-	return 0;
-}
-
-#else /* !CONFIG_IS_ENABLED(DM_USB_GADGET) */
-struct usba_priv_data {
-	struct clk_bulk		clks;
-	struct usba_udc		udc;
-};
-
 static int usba_udc_start(struct usb_gadget *gadget,
 			  struct usb_gadget_driver *driver)
 {
@@ -1338,6 +1253,43 @@ static int usba_udc_stop(struct usb_gadget *gadget)
 	usba_udc_disable(udc);
 	return 0;
 }
+
+#if !CONFIG_IS_ENABLED(DM_USB_GADGET)
+static struct usba_udc controller = {
+	.regs = (unsigned *)ATMEL_BASE_UDPHS,
+	.fifo = (unsigned *)ATMEL_BASE_UDPHS_FIFO,
+	.gadget = {
+		.ops		= &usba_udc_ops,
+		.ep_list	= LIST_HEAD_INIT(controller.gadget.ep_list),
+		.speed		= USB_SPEED_HIGH,
+		.is_dualspeed	= 1,
+		.name		= "atmel_usba_udc",
+	},
+};
+
+int dm_usb_gadget_handle_interrupts(struct udevice *dev)
+{
+	struct usba_udc *udc = &controller;
+
+	return usba_udc_irq(udc);
+}
+
+int usba_udc_probe(struct usba_platform_data *pdata)
+{
+	struct usba_udc *udc;
+
+	udc = &controller;
+
+	udc->usba_ep = usba_udc_pdata(pdata, udc);
+
+	return usb_add_gadget_udc(NULL, &udc->gadget);
+}
+
+#else /* !CONFIG_IS_ENABLED(DM_USB_GADGET) */
+struct usba_priv_data {
+	struct clk_bulk		clks;
+	struct usba_udc		udc;
+};
 
 static int usba_udc_clk_init(struct udevice *dev, struct clk_bulk *clks)
 {
