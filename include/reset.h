@@ -519,4 +519,36 @@ static inline bool reset_valid(struct reset_ctl *reset_ctl)
 	return !!reset_ctl->dev;
 }
 
+/**
+ * reset_control_assert() - assert an optional reset signal
+ *
+ * Linux compatible wrapper around reset_assert().
+ *
+ * @rstc:	the reset to assert, or NULL
+ * Return: 0 if OK or if @rstc is NULL, or a negative error code.
+ */
+static inline int reset_control_assert(struct reset_ctl *rstc)
+{
+	if (!rstc)
+		return 0;
+
+	return reset_assert(rstc);
+}
+
+/**
+ * reset_control_deassert() - deassert an optional reset signal
+ *
+ * Linux compatible wrapper around reset_deassert().
+ *
+ * @rstc:	the reset to deassert, or NULL
+ * Return: 0 if OK or if @rstc is NULL, or a negative error code.
+ */
+static inline int reset_control_deassert(struct reset_ctl *rstc)
+{
+	if (!rstc)
+		return 0;
+
+	return reset_deassert(rstc);
+}
+
 #endif
